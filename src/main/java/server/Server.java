@@ -4,12 +4,15 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Server {
 
     private static int port = 8089;
     private ServerSocket serverSocket;
-    private static final String FILE_SETTINGS = "C:\\Users\\lshap\\IdeaProjects\\server\\settings.txt";
+    private static final String FILE_SETTINGS = "src\\main\\java\\server\\settings.txt";
 
     public Server(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
@@ -22,7 +25,8 @@ public class Server {
                 Socket socket = serverSocket.accept();
                 System.out.println("new client has connected");
                 ClientHandler connection = new ClientHandler(socket);
-                new Thread(connection).start();
+                Thread thread = new Thread(connection);
+                thread.start();
 
             }
         }catch (IOException e){
@@ -39,7 +43,9 @@ public class Server {
             while((c=reader.read())!=-1){
                stringBuilder.append ((char)c);
             }
-            port = Integer.parseInt(stringBuilder.toString().trim().substring(7));
+            List<String> settings = Arrays.asList(stringBuilder.toString().split("\r\n"));
+            port = Integer.parseInt(settings.get(0).substring(5));
+
         }
         catch(IOException ex){
             System.out.println(ex.getMessage());

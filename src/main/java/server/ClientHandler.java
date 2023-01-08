@@ -1,16 +1,17 @@
 package server;
+
 import logger.Logger;
 
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class ClientHandler implements Runnable{
+public class ClientHandler implements Runnable {
 
-    public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    private static CopyOnWriteArrayList<ClientHandler> clientHandlers = new CopyOnWriteArrayList<>();
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
@@ -20,7 +21,7 @@ public class ClientHandler implements Runnable{
     private SimpleDateFormat formatForDateNow = new SimpleDateFormat("yyyy.MM.dd hh:mm:ss a");
 
     public ClientHandler(Socket socket) {
-        try{
+        try {
             this.socket = socket;
             this.bufferedReader = new BufferedReader(new InputStreamReader((socket.getInputStream())));
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -29,39 +30,42 @@ public class ClientHandler implements Runnable{
             broadcastMessage("SERVER: " + clientUsername + " присоединился к чату");
 
         } catch (IOException e) {
-            closeEverything(socket,bufferedWriter,bufferedReader);
+            closeEverything(socket, bufferedWriter, bufferedReader);
         }
     }
 
-    public void broadcastMessage(String msgToSend){
-        for(ClientHandler clientHandler : clientHandlers){
-            try{
-                if(!clientHandler.clientUsername.equals(clientUsername)){
+    public void broadcastMessage(String msgToSend) {
+        for (ClientHandler clientHandler : clientHandlers) {
+            try {
+                if (msgToSend != null && clientHandler != null) {
                     clientHandler.bufferedWriter.write(msgToSend);
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
+
+                } else {
+                    closeEverything(socket, bufferedWriter, bufferedReader);
                 }
             } catch (IOException e) {
-                closeEverything(socket,bufferedWriter,bufferedReader);
+                closeEverything(socket, bufferedWriter, bufferedReader);
             }
         }
     }
 
-    public void removeClientHandler(){
+    public void removeClientHandler() {
         clientHandlers.remove(this);
         broadcastMessage("SERVER: " + clientUsername + " покинул чат");
     }
 
-    public void closeEverything(Socket socket,BufferedWriter bufferedWriter, BufferedReader bufferedReader){
+    public void closeEverything(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader) {
         removeClientHandler();
-        try{
-            if(bufferedReader != null){
+        try {
+            if (bufferedReader != null) {
                 bufferedReader.close();
             }
-            if(bufferedWriter != null){
+            if (bufferedWriter != null) {
                 bufferedWriter.close();
             }
-            if(socket != null){
+            if (socket != null) {
                 socket.close();
             }
         } catch (IOException e) {
@@ -72,13 +76,17 @@ public class ClientHandler implements Runnable{
     @Override
     public void run() {
         String msgFromClient;
-        while (socket.isConnected()){
+        while (socket.isConnected()) {
             try {
                 msgFromClient = bufferedReader.readLine();
+                if (msgFromClient.substring(msgFromClient.length() - 4).equals("exit")){
+                    closeEverything(socket, bufferedWriter, bufferedReader);
+                    break;
+                }
                 logger.log(formatForDateNow.format(dateNow) + " " + msgFromClient);
                 broadcastMessage(msgFromClient);
             } catch (IOException e) {
-                closeEverything(socket,bufferedWriter,bufferedReader);
+                closeEverything(socket, bufferedWriter, bufferedReader);
                 break;
             }
         }
